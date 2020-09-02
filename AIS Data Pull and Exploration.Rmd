@@ -1,0 +1,56 @@
+---
+title: "AIS Data Fun"
+author: "Andy Jones"
+date: "8/27/2020"
+output: html_document
+---
+
+```{r}
+#Loading packages
+library(tidyverse)
+
+#Pulling data another way (section 19 for 2017 month)
+download.file('https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2017/AIS_2017_12_Zone19.zip',destfile = '/Users/Andy/Downloads/AIS_2017_12_Zone19.zip')
+unzip('/Users/Andy/Downloads/AIS_2017_12_Zone19.zip',exdir='/Users/Andy/Downloads/AIS_2017_12_Zone19/')
+AIS_2017_12_Zone19 <- read_csv('/Users/Andy/Downloads/AIS_2017_12_Zone19//AIS_ASCII_by_UTM_Month/2017/AIS_2017_12_Zone19.csv')
+
+#Looking at which vessels are fishing
+AIS_2017_12_Zone19 %>% filter(VesselType==1001) %>% group_by(VesselName) %>% tally() %>% View()
+
+#Looking at a single vessel
+AIS_2017_12_Zone19 %>% filter(VesselName=='OCEAN STATE') %>% ggplot(aes(x=LON,y=LAT)) + geom_point()
+
+#Adding in a US map
+MainStates <- map_data("state")
+
+#Filtering the data to fishing vessels (VesselType==1001)
+#And a speed range (SOG > 3)
+data <- AIS_2017_12_Zone19 %>% filter(VesselType==1001) %>% 
+                filter(LAT>30,SOG<10)
+
+#Plotting things out
+ggplot() + 
+  geom_polygon(data=MainStates, aes(x=long, y=lat, group=group),
+  color="black", fill="lightblue" ) +
+  #geom_point(data=data,aes(x=LON,y=LAT)) +
+  geom_point(data=data %>% filter(VesselName %in% c('OCEAN STATE','')),aes(x=LON,y=LAT,colour=SOG)) +
+  coord_sf(xlim = c(-72,-71), ylim = c(41,41.6))
+
+data <- AIS_2017_12_Zone19 %>% filter(VesselType==1001) %>% 
+                filter(LAT>30,SOG<10)
+
+data_vessel <- data %>% filter(VesselName %in% c('STARLIGHT','SUNLIGHT')) %>% mutate(DATE=as.Date(BaseDateTime))
+
+lat_max <- max(data_vessel$LAT)
+lat_min <- min(data_vessel$LAT)
+lon_max <- max(data_vessel$LON)
+lon_min <- min(data_vessel$LON)
+
+ggplot() + 
+  #geom_polygon(data=MainStates, aes(x=long, y=lat, group=group),color="black", fill="lightblue" ) +
+  #geom_point(data=data,aes(x=LON,y=LAT)) +
+  geom_point(data=data_vessel,aes(x=LON,y=LAT,colour=SOG)) + facet_wrap(~DATE)
+  #coord_sf(xlim = c(lon_min,lon_max), ylim = c(lat_min,lat_max))
+
+```
+
